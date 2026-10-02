@@ -1,9 +1,5 @@
-"""
-Configuration SQLAlchemy. Toutes les requêtes passent par l'ORM avec des
-paramètres liés (bind parameters) plutôt que par de la concaténation de
-chaînes — c'est ce qui neutralise l'injection SQL (OWASP A03), voir
-SECURITY.md pour un exemple concret du problème que ça évite.
-"""
+"""SQLAlchemy setup. All queries go through the ORM with bound parameters
+rather than string concatenation — see SECURITY.md for why that matters."""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 

@@ -1,13 +1,10 @@
-"""
-Modèles SQLAlchemy. Notes de sécurité :
-- Les mots de passe ne sont JAMAIS stockés en clair (hashed_password
-  uniquement, voir security.py pour le hachage bcrypt).
-- Les refresh tokens sont stockés sous forme de hash, jamais en clair,
-  pour qu'une fuite de la base de données ne permette pas de rejouer
-  les tokens directement (même logique que pour les mots de passe).
-- owner_id sur Note permet de vérifier l'appartenance d'une ressource
-  avant d'y donner accès (protection contre l'IDOR - Insecure Direct
-  Object Reference, un classique de l'OWASP A01 - Broken Access Control).
+"""SQLAlchemy models.
+
+- Passwords are never stored in plain text (hashed_password only).
+- Refresh tokens are stored as a hash, never in plain text, so a
+  database leak doesn't let tokens be replayed directly.
+- owner_id on Note is checked before granting access — protects against
+  IDOR (Insecure Direct Object Reference, OWASP A01).
 """
 from datetime import datetime, timezone
 
@@ -48,7 +45,7 @@ class RefreshToken(Base):
 
 
 class Note(Base):
-    """Ressource protégée arbitraire, utilisée pour démontrer le contrôle d'accès."""
+    """Generic protected resource, used to demonstrate access control."""
     __tablename__ = "notes"
 
     id = Column(Integer, primary_key=True, index=True)

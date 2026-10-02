@@ -1,7 +1,6 @@
-"""
-Fixtures partagées : une base SQLite dédiée aux tests (fichier temporaire,
-recréée à chaque run), injectée à la place de la base réelle via override
-de dépendance FastAPI.
+"""Shared fixtures: a dedicated SQLite test database (temp file, recreated
+on every run), injected in place of the real one via FastAPI's dependency
+override.
 """
 import os
 import tempfile
@@ -32,11 +31,10 @@ def client():
 
     app.dependency_overrides[get_db] = override_get_db
 
-    # Le limiter est un singleton partagé par toute la session de tests
-    # (même objet importé par app.main à chaque test). Sans ce reset, un
-    # test qui déclenche le rate limit (ex: test_rate_limit.py) laisse les
-    # tests suivants bloqués à 429, puisque TestClient utilise toujours la
-    # même adresse "testclient" comme clé de limitation.
+    # The limiter is a singleton shared across the whole test session.
+    # Without this reset, a test that trips the rate limit would leave
+    # later tests stuck at 429, since TestClient always uses the same
+    # "testclient" address as the limiting key.
     limiter.reset()
 
     with TestClient(app) as c:

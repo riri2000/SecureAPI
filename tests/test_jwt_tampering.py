@@ -1,9 +1,6 @@
-"""
-Tests de falsification de JWT : signature altérée, payload modifié à la
-main, token d'un autre type, token expiré. Dans tous les cas, l'accès
-doit être refusé (401), jamais une exception non gérée (500) qui
-trahirait un mauvais traitement des erreurs.
-"""
+"""JWT tampering tests: altered signature, hand-modified payload, wrong
+token type, expired token. In every case access must be denied (401),
+never an unhandled exception (500)."""
 import base64
 import json
 
@@ -12,15 +9,15 @@ from tests.conftest import register_and_login
 
 
 def _tamper_payload(token: str, **overrides) -> str:
-    """Modifie le payload d'un JWT sans connaître la clé secrète, pour
-    simuler un attaquant qui intercepte et altère un token."""
+    """Modify a JWT's payload without knowing the secret key, simulating
+    an attacker who intercepts and alters a token."""
     header_b64, payload_b64, signature_b64 = token.split(".")
     padding = "=" * (-len(payload_b64) % 4)
     payload = json.loads(base64.urlsafe_b64decode(payload_b64 + padding))
     payload.update(overrides)
     new_payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
-    # La signature d'origine ne correspond plus au nouveau payload —
-    # exactement le scénario qu'un attaquant sans la clé secrète produirait.
+    # The original signature no longer matches the new payload — exactly
+    # what an attacker without the secret key would produce.
     return f"{header_b64}.{new_payload_b64}.{signature_b64}"
 
 
@@ -37,7 +34,7 @@ def test_token_with_altered_subject_rejected(client):
 
     tampered = _tamper_payload(tokens["access_token"], sub="attacker")
     resp = client.get("/notes", headers={"Authorization": f"Bearer {tampered}"})
-    # La signature ne correspond plus au payload modifié -> rejeté.
+    # Signature no longer matches the modified payload -> rejected.
     assert resp.status_code == 401
 
 
@@ -52,9 +49,9 @@ def test_empty_bearer_token_rejected(client):
 
 
 def test_token_signed_with_wrong_algorithm_type_rejected(client):
-    """Un token créé correctement mais dont on force le type à 'refresh'
-    ne doit pas être accepté comme access token — vérifie qu'on ne peut
-    pas réutiliser un token d'un type pour un autre usage."""
+    """A correctly created token whose type is forced to 'refresh' must
+    not be accepted as an access token — a token can't be reused across
+    types."""
     fake_access = create_access_token(subject="someone")
     tampered = _tamper_payload(fake_access, type="refresh")
     resp = client.get("/notes", headers={"Authorization": f"Bearer {tampered}"})

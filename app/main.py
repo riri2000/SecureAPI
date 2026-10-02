@@ -1,10 +1,4 @@
-"""
-Point d'entrée de l'application. Rassemble :
-- les headers de sécurité HTTP (défense en profondeur, OWASP A05) ;
-- une politique CORS explicite plutôt qu'un wildcard "*" ;
-- le rate limiter global ;
-- les routers auth et notes.
-"""
+"""App entrypoint: security headers, CORS, rate limiter, routers."""
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -21,8 +15,8 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="SecureAPI",
     description=(
-        "API REST démontrant des mitigations concrètes contre les "
-        "vulnérabilités les plus courantes de l'OWASP Top 10."
+        "A REST API demonstrating concrete mitigations against the most "
+        "common OWASP Top 10 vulnerabilities."
     ),
     version="1.0.0",
 )
@@ -38,17 +32,30 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+# Swagger/ReDoc load their CSS/JS from jsdelivr, so they need a looser
+# CSP than the rest of the API — everything else returns plain JSON and
+# has no business loading external resources.
+DOCS_PATHS = {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
-    # Défense en profondeur : même si une couche applicative a une faille,
-    # ces headers limitent ce qu'un navigateur laissera se produire.
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'none'"
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+
+    if request.url.path in DOCS_PATHS:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://fastapi.tiangolo.com;"
+        )
+    else:
+        response.headers["Content-Security-Policy"] = "default-src 'none'"
+
     return response
 
 

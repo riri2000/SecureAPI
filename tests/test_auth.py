@@ -1,4 +1,4 @@
-"""Tests du parcours d'authentification standard (happy path + erreurs de base)."""
+"""Standard auth flow tests (happy path + basic error cases)."""
 from tests.conftest import VALID_PASSWORD, register_and_login
 
 
@@ -62,7 +62,7 @@ def test_refresh_token_rotation(client):
     new_tokens = resp.json()
     assert new_tokens["refresh_token"] != old_refresh
 
-    # Le vieux refresh token, une fois utilisé, doit être révoqué (rotation).
+    # The old refresh token must be revoked once used (rotation).
     replay = client.post("/auth/refresh", json={"refresh_token": old_refresh})
     assert replay.status_code == 401
 

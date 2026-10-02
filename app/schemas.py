@@ -1,9 +1,5 @@
-"""
-Schémas Pydantic. La validation stricte ici est la première ligne de
-défense contre l'injection et le XSS (OWASP A03) : un nom d'utilisateur
-qui ne matche pas le pattern autorisé, ou un mot de passe trop court,
-est rejeté avant même d'atteindre la base de données.
-"""
+"""Pydantic schemas. Strict validation here is the first line of defense
+against injection and XSS (OWASP A03) — bad input never reaches the database."""
 import re
 
 from pydantic import BaseModel, EmailStr, field_validator
@@ -21,8 +17,8 @@ class UserCreate(BaseModel):
     def username_must_be_safe(cls, v: str) -> str:
         if not USERNAME_PATTERN.match(v):
             raise ValueError(
-                "Le nom d'utilisateur doit contenir entre 3 et 50 caractères "
-                "alphanumériques, points, tirets ou underscores uniquement."
+                "Username must be 3-50 characters: letters, digits, "
+                "dots, hyphens or underscores only."
             )
         return v
 
@@ -30,11 +26,11 @@ class UserCreate(BaseModel):
     @classmethod
     def password_must_be_strong(cls, v: str) -> str:
         if len(v) < 10:
-            raise ValueError("Le mot de passe doit contenir au moins 10 caractères.")
+            raise ValueError("Password must be at least 10 characters.")
         if not re.search(r"[A-Z]", v) or not re.search(r"[a-z]", v) or not re.search(r"\d", v):
             raise ValueError(
-                "Le mot de passe doit contenir au moins une majuscule, "
-                "une minuscule et un chiffre."
+                "Password must contain at least one uppercase letter, "
+                "one lowercase letter, and one digit."
             )
         return v
 
@@ -71,14 +67,14 @@ class NoteCreate(BaseModel):
     @classmethod
     def title_length(cls, v: str) -> str:
         if not (1 <= len(v) <= 200):
-            raise ValueError("Le titre doit contenir entre 1 et 200 caractères.")
+            raise ValueError("Title must be 1-200 characters.")
         return v
 
     @field_validator("content")
     @classmethod
     def content_length(cls, v: str) -> str:
         if not (1 <= len(v) <= 10_000):
-            raise ValueError("Le contenu doit contenir entre 1 et 10 000 caractères.")
+            raise ValueError("Content must be 1-10,000 characters.")
         return v
 
 

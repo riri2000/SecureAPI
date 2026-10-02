@@ -1,7 +1,5 @@
-"""
-Dépendance FastAPI qui extrait et valide l'utilisateur courant à partir
-du header Authorization. Utilisée sur toutes les routes protégées.
-"""
+"""FastAPI dependency that extracts and validates the current user from
+the Authorization header. Used on every protected route."""
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -14,12 +12,12 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
+        credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+        db: Session = Depends(get_db),
 ) -> User:
     unauthorized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Identifiants invalides ou expirés.",
+        detail="Invalid or expired credentials.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     if credentials is None:

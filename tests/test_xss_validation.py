@@ -1,15 +1,13 @@
-"""
-Tests XSS et validation d'entrées.
+"""XSS and input validation tests.
 
-L'API ne fait jamais de rendu HTML (elle retourne du JSON), donc un XSS
-classique "réfléchi dans le navigateur" ne s'applique pas ici. Le vrai
-risque côté API REST est le "stored XSS" : un payload malveillant stocké
-tel quel et renvoyé un jour à un frontend qui l'afficherait sans
-l'échapper. Ces tests vérifient que :
-1. Le payload est stocké et retourné strictement tel quel (aucune
-   exécution ni transformation côté serveur) ;
-2. La validation Pydantic rejette les entrées structurellement invalides
-   (trop longues, vides) avant même d'atteindre la base de données.
+The API never renders HTML (it returns JSON), so a classic "reflected"
+XSS doesn't apply here. The real risk for a REST API is stored XSS: a
+malicious payload stored as-is and later returned to a frontend that
+renders it unescaped. These tests verify that:
+1. The payload is stored and returned exactly as sent (no server-side
+   execution or transformation);
+2. Pydantic validation rejects structurally invalid input (too long,
+   empty) before it ever reaches the database.
 """
 import pytest
 
@@ -30,10 +28,9 @@ def test_xss_payload_stored_as_literal_text(client, payload):
 
     resp = client.post("/notes", json={"title": "note", "content": payload}, headers=headers)
     assert resp.status_code == 201
-    # Le contenu revient identique : ni exécuté, ni altéré silencieusement.
-    # C'est au frontend consommateur d'échapper à l'affichage (responsabilité
-    # séparée), mais l'API elle-même ne doit jamais faire confiance à ce
-    # qu'elle stocke.
+    # Content comes back identical: neither executed nor silently altered.
+    # Escaping on render is the consumer frontend's job (separate
+    # concern), but the API itself should never trust what it stores.
     assert resp.json()["content"] == payload
 
 

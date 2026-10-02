@@ -1,10 +1,8 @@
-"""
-Rate limiting global via slowapi (basé sur la librairie `limits`).
+"""Global rate limiting via slowapi.
 
-Stockage en mémoire par défaut (suffisant en dev / une seule instance) ;
-passer RATE_LIMIT_STORAGE_URI=redis://... en production pour que la
-limite soit partagée entre plusieurs instances de l'API derrière un
-load balancer.
+In-memory storage by default (fine for dev / a single instance). Set
+RATE_LIMIT_STORAGE_URI=redis://... in production so the limit is shared
+across instances behind a load balancer.
 """
 from slowapi import Limiter
 from slowapi.util import get_remote_address

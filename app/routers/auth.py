@@ -1,9 +1,7 @@
-"""
-Routes d'authentification : /register, /login, /refresh, /logout.
+"""Auth routes: /register, /login, /refresh, /logout.
 
-/login est volontairement soumis à une limite de taux plus stricte que
-le reste de l'API (voir décorateur @limiter.limit) pour ralentir les
-attaques par brute-force sur les mots de passe (OWASP A07).
+/login has a stricter rate limit than the rest of the API to slow down
+password brute-forcing (OWASP A07).
 """
 from datetime import datetime, timezone
 
@@ -44,9 +42,8 @@ def _issue_token_pair(user: User, db: Session) -> Token:
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
-    # Réponse volontairement générique : on ne révèle jamais si c'est le
-    # username ou l'email qui est déjà pris, pour éviter l'énumération de
-    # comptes (OWASP A01/A07).
+    # Generic conflict response — never reveal whether it's the username
+    # or the email that's taken, to avoid account enumeration.
     existing = (
         db.query(User)
         .filter((User.username == payload.username) | (User.email == payload.email))
@@ -55,7 +52,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Un compte avec ces informations existe déjà.",
+            detail="An account with these details already exists.",
         )
 
     user = User(
@@ -74,12 +71,11 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == payload.username).first()
 
-    # Message d'erreur identique que ce soit le username ou le mot de passe
-    # qui soit faux : révéler lequel est correct facilite l'énumération de
-    # comptes valides pour un attaquant.
+    # Same error whether the username or the password is wrong — revealing
+    # which one is correct makes account enumeration easier.
     invalid_credentials = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Nom d'utilisateur ou mot de passe invalide.",
+        detail="Invalid username or password.",
     )
 
     if not user or not verify_password(payload.password, user.hashed_password):
@@ -95,7 +91,7 @@ def refresh(payload: TokenRefreshRequest, db: Session = Depends(get_db)):
 
     invalid = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Refresh token invalide ou expiré.",
+        detail="Invalid or expired refresh token.",
     )
 
     if stored is None or stored.revoked:
@@ -107,9 +103,8 @@ def refresh(payload: TokenRefreshRequest, db: Session = Depends(get_db)):
     if expires_at < datetime.now(timezone.utc):
         raise invalid
 
-    # Rotation : l'ancien token est révoqué immédiatement, qu'il soit
-    # réutilisé ou non. S'il l'est (signe possible de vol), la nouvelle
-    # tentative avec l'ancien token échouera la prochaine fois.
+    # Rotation: the old token is revoked immediately. If it gets reused
+    # (a sign it may have been stolen), the next attempt with it fails.
     stored.revoked = True
     db.commit()
 

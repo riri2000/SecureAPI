@@ -1,12 +1,10 @@
-"""
-Tests d'intrusion automatisés — injection SQL.
+"""Automated SQL injection tests.
 
-Chaque payload ci-dessous est un classique de manuel OWASP. On les envoie
-dans tous les champs texte accessibles (login, création de note) et on
-vérifie que l'API les traite comme du texte littéral inoffensif plutôt
-que comme du SQL exécutable — ce que garantit l'utilisation exclusive de
-requêtes paramétrées via l'ORM SQLAlchemy (aucune f-string ni
-concaténation de SQL brut nulle part dans app/).
+Each payload below is a textbook OWASP example. We send them into every
+accessible text field (login, note creation) and verify the API treats
+them as harmless literal text rather than executable SQL — guaranteed
+by using the SQLAlchemy ORM exclusively (no f-strings or raw SQL
+concatenation anywhere in app/).
 """
 import pytest
 
@@ -24,9 +22,8 @@ SQL_INJECTION_PAYLOADS = [
 @pytest.mark.parametrize("payload", SQL_INJECTION_PAYLOADS)
 def test_login_username_injection_does_not_bypass_auth(client, payload):
     resp = client.post("/auth/login", json={"username": payload, "password": "whatever"})
-    # Le payload doit être traité comme un simple username inexistant :
-    # 401, jamais un contournement d'authentification ni une erreur 500
-    # qui trahirait une requête SQL cassée.
+    # Must be treated as a plain nonexistent username: 401, never an
+    # auth bypass or a 500 that would betray a broken SQL query.
     assert resp.status_code == 401
 
 
@@ -37,18 +34,17 @@ def test_note_content_injection_is_stored_as_plain_text(client, payload):
 
     resp = client.post("/notes", json={"title": "test", "content": payload}, headers=headers)
     assert resp.status_code == 201
-    assert resp.json()["content"] == payload  # stocké tel quel, jamais interprété
+    assert resp.json()["content"] == payload  # stored as-is, never interpreted
 
-    # La table users doit toujours exister et être inchangée : la preuve
-    # concrète qu'un "DROP TABLE" envoyé en payload n'a rien exécuté.
+    # The users table must still exist and work normally — concrete proof
+    # that a "DROP TABLE" payload executed nothing.
     list_resp = client.get("/notes", headers=headers)
     assert list_resp.status_code == 200
 
 
 def test_database_survives_drop_table_attempt(client):
-    """Vérifie qu'après une tentative d'injection, l'API et la base
-    fonctionnent toujours normalement — la meilleure preuve qu'aucune
-    requête arbitraire n'a été exécutée côté serveur."""
+    """After an injection attempt, the API and database should still work
+    normally — the best proof that no arbitrary query ran server-side."""
     register_and_login(client, "survivor")
     resp = client.post(
         "/auth/register",
