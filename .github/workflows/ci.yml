@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run test suite (including attack tests)
+        run: pytest -v
+
+      - name: Static security scan (Bandit)
+        run: bandit -r app/ -ll
+
+      - name: Dependency vulnerability scan (Safety)
+        run: safety check -r requirements.txt --full-report
+        continue-on-error: true  # Safety nécessite une clé API pour la DB complète ; ne bloque pas la CI si indisponible.
